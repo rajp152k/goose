@@ -4,7 +4,8 @@
    [goose.capability :as c]
    [clojure.set :as s]
    [goose.specs :as specs]
-   [goose.brokers.rmq.queue :as rmq-queue]))
+   [goose.brokers.rmq.queue :as rmq-queue]
+   [clojure.test :refer [deftest testing report test-var]]))
 
 (def broker-utils
   {:redis {:fixtures {:pre [specs/instrument
@@ -43,3 +44,19 @@
            (throw ex#))
          (finally
            ~@(fetch-fixtures broker :post))))))
+
+(defmacro def-integration-test [test-name requirements & body]
+  `(def ~(vary-meta test-name
+                    assoc :test
+                    `(fn []
+                       (doseq [~'broker ~(keys broker-utils)]
+                         (if (broker-testable? ~'broker ~requirements)
+                           (with-fixtures ~'broker
+                             (fn [ex#] (report {:type :default
+                                                :message (ex-message ex#)}))
+                             (testing (str ~test-name ":" ~'broker)
+                               ~@body))
+                           (report {:type :default
+                                    :message (str ~test-name ~'broker " is not testable")})))))
+     (fn [] (test-var (var ~test-name)))))
+
