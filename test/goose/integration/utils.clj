@@ -1,4 +1,4 @@
-(ns goose.integration.test-utils
+(ns goose.integration.utils
   (:require
    [goose.test-utils :as tu]
    [goose.capability :as c]
